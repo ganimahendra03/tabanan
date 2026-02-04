@@ -19,10 +19,20 @@
         .mode-container { display: flex; justify-content: center; gap: 8px; }
         .mode-pill { background: rgba(255, 255, 255, 0.95); border: 1px solid #ddd; padding: 5px 15px; border-radius: 20px; font-size: 11px; font-weight: 800; color: #555; cursor: pointer; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .mode-pill.active { background: var(--navy); color: white; border-color: var(--navy); }
-        .google-bar { display: flex; align-items: center; background: white; padding: 5px 15px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid #eee; }
-        .google-bar input { flex: 1; border: none; outline: none; padding: 8px; font-size: 14px; }
+        
+        /* Tambahan CSS sedikit untuk dropdown hasil pencarian agar tetap rapi dalam struktur kamu */
+        .google-bar-container { position: relative; width: 100%; }
+        .google-bar { display: flex; align-items: center; background: white; padding: 5px 15px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid #eee; position: relative; z-index: 101; }
+        .google-bar input { flex: 1; border: none; outline: none; padding: 8px; font-size: 14px; background: transparent; }
         .search-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; }
         .search-btn svg { fill: var(--navy); width: 22px; height: 22px; }
+
+        /* Suggestion Box Styles */
+        .suggest-box { position: absolute; top: 25px; left: 0; width: 100%; background: white; border-radius: 0 0 15px 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15); display: none; overflow: hidden; z-index: 100; padding-top: 25px; border: 1px solid #eee; border-top: none; }
+        .suggest-item { padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #f9f9f9; display: flex; flex-direction: column; }
+        .suggest-item:hover { background: #f0f7ff; }
+        .suggest-item .main-name { font-size: 13px; font-weight: 700; color: #333; }
+        .suggest-item .sub-name { font-size: 10px; color: #888; }
 
         /* LEGEND PANEL */
         .legend-toggle { position: absolute; top: 15px; right: 15px; z-index: 110; background: white; width: 34px; height: 34px; border-radius: 4px; border: none; box-shadow: 0 0 0 2px rgba(0,0,0,.1); display: flex; align-items: center; justify-content: center; cursor: pointer; }
@@ -76,11 +86,14 @@
         <div id="mode-addr" class="mode-pill active" onclick="setSearchMode('address')">ALAMAT</div>
         <div id="mode-coord" class="mode-pill" onclick="setSearchMode('coordinate')">KOORDINAT</div>
     </div>
-    <div class="google-bar">
-        <input type="text" id="search-input" placeholder="Cari alamat atau tempat...">
-        <button class="search-btn" onclick="handleSearch()">
-            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        </button>
+    <div class="google-bar-container">
+        <div class="google-bar">
+            <input type="text" id="search-input" placeholder="Cari alamat atau tempat..." autocomplete="off">
+            <button class="search-btn" onclick="handleSearch()">
+                <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            </button>
+        </div>
+        <div id="suggest-box" class="suggest-box"></div>
     </div>
 </div>
 
@@ -184,9 +197,49 @@
         center: [115.1277, -8.4543], zoom: 10
     });
 
-    // MARKER SEARCH + HILANG SAAT DIKLIK
     const searchMarker = new maplibregl.Marker({ color: 'red' });
     searchMarker.getElement().addEventListener('click', () => { searchMarker.remove(); });
+
+    // PHOTON AUTO-SUGGEST LOGIC (Hanya ini tambahannya)
+    const searchInput = document.getElementById('search-input');
+    const suggestBox = document.getElementById('suggest-box');
+
+    searchInput.addEventListener('input', async () => {
+        const val = searchInput.value;
+        if (val.length < 3 || searchMode === 'coordinate') { suggestBox.style.display = 'none'; return; }
+        
+        // Panggil API Photon (Dibatasi area Tabanan/Bali)
+        const res = await fetch(`https://photon.komoot.io/api/?q=${val}&lat=-8.45&lon=115.12&limit=5`);
+        const data = await res.json();
+        
+        suggestBox.innerHTML = '';
+        if (data.features.length > 0) {
+            data.features.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'suggest-item';
+                div.innerHTML = `<span class="main-name">${f.properties.name || ''}</span>
+                                <span class="sub-name">${f.properties.city || ''}, ${f.properties.state || ''}</span>`;
+                div.onclick = () => {
+                    const [lon, lat] = f.geometry.coordinates;
+                    searchInput.value = f.properties.name;
+                    suggestBox.style.display = 'none';
+                    map.flyTo({ center: [lon, lat], zoom: 17 });
+                    searchMarker.setLngLat([lon, lat]).addTo(map);
+                    // Trigger popup otomatis seperti logika kamu
+                    setTimeout(() => {
+                        map.fire('click', { lngLat: {lng: lon, lat: lat}, point: map.project([lon, lat]) });
+                    }, 600);
+                };
+                suggestBox.appendChild(div);
+            });
+            suggestBox.style.display = 'block';
+        } else {
+            suggestBox.style.display = 'none';
+        }
+    });
+
+    // Menutup suggest box saat klik di luar
+    document.addEventListener('click', (e) => { if (!e.target.closest('.search-wrapper')) suggestBox.style.display = 'none'; });
 
     map.on('load', () => {
         map.addControl(new maplibregl.NavigationControl(), 'top-left');
@@ -275,7 +328,6 @@
         document.getElementById('val-y').innerText = y.toFixed(5);
     });
 
-    // SEARCH LOGIC
     let searchMode = 'address'; 
     function updatePlaceholder() {
         const inputField = document.getElementById('search-input');
@@ -293,6 +345,7 @@
         document.getElementById('mode-addr').className = m === 'address' ? 'mode-pill active' : 'mode-pill';
         document.getElementById('mode-coord').className = m === 'coordinate' ? 'mode-pill active' : 'mode-pill';
         updatePlaceholder();
+        suggestBox.style.display = 'none'; // Sembunyikan saran jika pindah mode
     }
 
     function updateCoordLabels() { 
@@ -327,6 +380,7 @@
                 }
             }
         } else {
+            // Nominatim tetap ada sebagai fallback pencarian manual (Enter/Klik tombol)
             fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${val}&viewbox=114.8,-8.6,115.5,-8.1&bounded=1`)
             .then(r => r.json()).then(d => { 
                 if(d[0]) { 
