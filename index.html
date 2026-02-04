@@ -3,401 +3,352 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebGIS Tabanan - Multi Opacity</title>
+    <title>WebGIS Tabanan - Smart Popup</title>
     
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v8.2.0/ol.css">
-    <script src="https://cdn.jsdelivr.net/npm/ol@v8.2.0/dist/ol.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
 
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; }
-        #map { width: 100%; height: 100vh; background-color: #f0f0f0; }
+        :root { --navy: #001f3f; --accent: #0074D9; --lsd-orange: rgba(255, 85, 0, 1.0); }
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
 
-        /* --- SEARCH UI --- */
-        .search-wrapper {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 2000; display: flex; flex-direction: column; align-items: center; gap: 8px;
-        }
-        .mode-toggle {
-            display: flex; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px);
-            padding: 3px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            border: 1px solid rgba(255,255,255,0.4);
-        }
-        .mode-btn {
-            font-size: 10px; padding: 5px 12px; border: none; background: none;
-            cursor: pointer; border-radius: 15px; font-weight: bold; color: #444; transition: 0.3s;
-        }
-        .mode-btn.active { background: #003366; color: white; }
-        .search-container {
-            display: flex; background: rgba(255, 255, 255, 0.7); 
-            backdrop-filter: blur(5px); padding: 6px; border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1); gap: 5px;
-            border: 1px solid rgba(255, 255, 255, 0.3); position: relative;
-        }
-        .search-container input {
-            border: 1px solid rgba(0, 0, 0, 0.1); background: rgba(255, 255, 255, 0.8);
-            padding: 6px 10px; border-radius: 5px; outline: none; font-size: 12px; transition: all 0.3s;
-        }
-        #input-addr { width: 270px; }
-        .input-coord { width: 130px; }
-        .search-container button {
-            background-color: rgba(0, 51, 102, 0.8); color: white; border: none;
-            padding: 0 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;
-        }
+        /* SEARCH & UI */
+        .search-wrapper { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 100; width: 90%; max-width: 420px; display: flex; flex-direction: column; gap: 8px; }
+        .mode-container { display: flex; justify-content: center; gap: 8px; }
+        .mode-pill { background: rgba(255, 255, 255, 0.95); border: 1px solid #ddd; padding: 5px 15px; border-radius: 20px; font-size: 11px; font-weight: 800; color: #555; cursor: pointer; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .mode-pill.active { background: var(--navy); color: white; border-color: var(--navy); }
+        .google-bar { display: flex; align-items: center; background: white; padding: 5px 15px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid #eee; }
+        .google-bar input { flex: 1; border: none; outline: none; padding: 8px; font-size: 14px; }
+        .search-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; }
+        .search-btn svg { fill: var(--navy); width: 22px; height: 22px; }
 
-        /* --- KOTAK KOORDINAT --- */
-        .custom-mouse-position { 
-            position: absolute; bottom: 30px; left: 30px; z-index: 3000; 
-            display: flex; align-items: center; justify-content: center; 
-            background-color: #003366; color: #ffffff !important; 
-            height: 30px; min-width: 230px; padding: 0 20px; 
-            border-radius: 8px; border: 2px solid #0055aa; 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4); 
-            font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: bold; text-align: center;
-        }
+        /* LEGEND PANEL */
+        .legend-toggle { position: absolute; top: 15px; right: 15px; z-index: 110; background: white; width: 34px; height: 34px; border-radius: 4px; border: none; box-shadow: 0 0 0 2px rgba(0,0,0,.1); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .legend-panel { position: absolute; top: 0; right: -320px; width: 300px; height: 100%; background: #f8f9fa; z-index: 2000; box-shadow: -2px 0 15px rgba(0,0,0,0.2); transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
+        .legend-panel.active { right: 0; }
+        .legend-header { background: var(--navy); color: white; padding: 15px; font-size: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .layer-manager-item { background: white; margin: 8px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .layer-header-row { padding: 8px 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .layer-title { flex: 1; font-size: 12px; font-weight: bold; color: #333; }
+        .eye-icon { cursor: pointer; display: flex; align-items: center; color: var(--navy); }
+        .eye-icon.off { color: #ccc !important; }
+        .dropdown-content { display: none; padding: 12px; background: #fff; }
+        .dropdown-content.active { display: block; }
+        .legend-item { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-size: 10.5px; }
+        .legend-color { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,0.1); }
 
-        /* --- KONTROL KANAN BAWAH --- */
-        .bottom-right-controls { 
-            position: absolute; top: 30px; right: 20px; 
-            z-index: 2000; display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
-        }
-        .layer-menu { 
-            background: white; padding: 15px; border-radius: 10px; 
-            box-shadow: 0 4px 25px rgba(0,0,0,0.2); display: none; min-width: 220px; 
-            border: 1px solid #ddd; max-height: 75vh; overflow-y: auto;
-            position: absolute; top: 0px; right: 55px;
-        }
-        .action-btn { 
-            width: 40px; height: 40px; background: white; border-radius: 10px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; border: none;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .action-btn img { width: 20px; height: 20px; }
+        /* OPACITY SLIDER STYLING */
+        .opacity-container { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #eee; }
+        .opacity-label { font-size: 10px; font-weight: bold; color: #666; margin-bottom: 4px; display: block; }
+        .opacity-slider { width: 100%; cursor: pointer; accent-color: var(--navy); height: 4px; }
 
-        .dropdown-legend-btn {
-            width: 100%; background: #f4f4f4; border: 1px solid #ddd;
-            padding: 6px; margin-top: 8px; border-radius: 5px; cursor: pointer;
-            font-size: 11px; font-weight: bold; color: #003366;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        #legendList { display: none; }
+        /* COORDINATES */
+        .coord-container { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); padding: 8px 20px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); z-index: 20; display: flex; align-items: center; gap: 15px; border: 1px solid rgba(255,255,255,0.3); }
+        .crs-picker { background: var(--navy); color: white; border: none; padding: 4px 8px; border-radius: 5px; font-size: 10px; font-weight: 600; cursor: pointer; }
 
-        /* --- POPUP --- */
-        .ol-popup {
-            position: absolute; background-color: white; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-            padding: 15px; border-radius: 10px; border: 1px solid #cccccc; bottom: 12px;
-            left: -50px; min-width: 200px;
-        }
-        .ol-popup-closer {
-            text-decoration: none; position: absolute; top: 5px; right: 10px;
-            cursor: pointer; font-size: 16px; font-weight: bold; color: #888;
-        }
-        .ol-popup-closer:after { content: "✖"; }
-        .gps-active { background-color: #e3f2fd !important; border: 2px solid #2196f3 !important; }
+        /* BASEMAP */
+        .basemap-switcher { position: absolute; bottom: 30px; right: 20px; display: flex; gap: 10px; z-index: 10; }
+        .bm-item { width: 60px; height: 60px; border-radius: 10px; cursor: pointer; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: relative; overflow: hidden; transition: 0.3s; }
+        .bm-item.active { border-color: var(--navy); transform: translateY(-3px); }
+        .bm-item img { width: 100%; height: 100%; object-fit: cover; }
+        .bm-label { position: absolute; bottom: 0; width: 100%; background: rgba(0,31,63,0.8); color: white; font-size: 7px; text-align: center; padding: 3px 0; font-weight: bold; }
 
-        /* --- STYLING SLIDER --- */
-        .opacity-container {
-            background: white; padding: 12px; border-radius: 10px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid #ddd; 
-            width: 130px; display: flex; flex-direction: column; gap: 10px;
-        }
-        .slider-group { display: flex; flex-direction: column; gap: 4px; }
-        .slider-label { font-size: 9px; font-weight: bold; color: #555; text-transform: uppercase; }
-        input[type="range"] { cursor: pointer; accent-color: #003366; width: 100%; }
-
-        @media (max-width: 600px) {
-            #input-addr { width: 160px; }
-            .input-coord { width: 75px; }
-            .custom-mouse-position { min-width: 180px; bottom: 100px; left: 50%; transform: translateX(-50%); font-size: 11px; }
-        }
+        /* POPUP STYLE */
+        .maplibregl-popup-content { padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.2); border: none; max-width: 280px !important; }
+        .pop-container { max-height: 350px; overflow-y: auto; background: #fff; }
+        .pop-section { border-bottom: 1px solid #eee; }
+        .pop-header-title { background: #f4f7f9; color: var(--navy); padding: 8px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid #eee; }
+        .pop-info-box { padding: 12px; display: flex; align-items: flex-start; gap: 10px; }
+        .pop-swatch { width: 18px; height: 18px; border-radius: 4px; flex-shrink: 0; margin-top: 2px; border: 1px solid rgba(0,0,0,0.1); }
+        .pop-details { display: flex; flex-direction: column; flex-grow: 1; }
+        .pop-obj-name { font-size: 13px; font-weight: 700; color: #222; line-height: 1.3; }
+        .pop-sub { font-size: 10px; color: #666; margin-top: 2px; font-weight: 500; }
     </style>
 </head>
 <body>
 
-    <div class="search-wrapper">
-        <div class="mode-toggle">
-            <button class="mode-btn active" id="btn-mode-addr" onclick="switchMode('addr')">ALAMAT</button>
-            <button class="mode-btn" id="btn-mode-coord" onclick="switchMode('coord')">KOORDINAT</button>
-        </div>
-        <div class="search-container">
-            <div id="box-addr">
-                <input type="text" id="input-addr" placeholder="Cari alamat..." autocomplete="off">
-            </div>
-            <div id="box-coord" style="display: none;">
-                <input type="text" id="input-x" class="input-coord" placeholder="X / Lon">
-                <input type="text" id="input-y" class="input-coord" placeholder="Y / Lat">
-            </div>
-            <button onclick="executeSearch()">Cari</button>
-        </div>
+<div id="map"></div>
+
+<div class="search-wrapper">
+    <div class="mode-container">
+        <div id="mode-addr" class="mode-pill active" onclick="setSearchMode('address')">ALAMAT</div>
+        <div id="mode-coord" class="mode-pill" onclick="setSearchMode('coordinate')">KOORDINAT</div>
     </div>
-
-    <div id="mouse-position" class="custom-mouse-position"></div>
-
-    <div class="bottom-right-controls">
-        <div id="layer-window" class="layer-menu">
-            <p style="margin:0 0 8px; font-size:11px; color:#888; font-weight:bold;">BASEMAP</p>
-            <label style="font-size:13px;"><input type="radio" name="base" value="osm" checked onchange="changeBasemap(this.value)"> OpenStreetMap</label><br>
-            <label style="font-size:13px;"><input type="radio" name="base" value="arcgis" onchange="changeBasemap(this.value)"> ArcGIS Satelit</label>
-            
-            <hr style="margin:10px 0; border:0; border-top:1px solid #eee;">
-            
-            <p style="margin:0 0 8px; font-size:11px; color:#888; font-weight:bold;">DATA LAYER</p>
-            <label style="font-weight:bold; cursor:pointer; font-size:13px;">
-                <input type="checkbox" id="toggleRTRW" checked> RTRW Kabupaten Tabanan
-            </label><br>
-            <label style="font-weight:bold; cursor:pointer; font-size:13px; color: #ff5500;">
-                <input type="checkbox" id="toggleLSD" checked> LSD (Lahan Sawah Dilindungi)
-            </label>
-
-            <button class="dropdown-legend-btn" id="btn-legend" onclick="toggleLegendMenu()">
-                <span>TAMPILKAN LEGENDA</span> <span id="leg-arrow">▼</span>
-            </button>
-            <div id="legendList" style="max-height: 200px; overflow-y: auto; margin-top: 8px; padding-left: 5px; font-size: 10px; border-left: 2px solid #eee;"></div>
-
-            <hr style="margin:10px 0; border:0; border-top:1px solid #eee;">
-            
-            <p style="margin:0 0 8px; font-size:11px; color:#888; font-weight:bold;">SISTEM KOORDINAT</p>
-            <label style="font-size:13px;"><input type="radio" name="coord_sys" value="latlong" checked> Geografis (WGS84)</label><br>
-            <label style="font-size:13px;"><input type="radio" name="coord_sys" value="tm3"> TM-3 (Zona 50.1)</label><br>
-            <label style="font-size:13px;"><input type="radio" name="coord_sys" value="utm"> UTM (Zona 50S)</label>
-        </div>
-        
-        <button class="action-btn" onclick="toggleLayerMenu()" title="Layer & Legenda">
-            <img src="https://img.icons8.com/ios-filled/50/003366/layers.png">
+    <div class="google-bar">
+        <input type="text" id="search-input" placeholder="Cari alamat atau tempat...">
+        <button class="search-btn" onclick="handleSearch()">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
         </button>
-        
-        <button id="gps-btn" class="action-btn" onclick="getMyLocation()" title="Lokasi Saya">
-            <img src="https://img.icons8.com/ios-filled/50/003366/compass.png">
-        </button>
+    </div>
+</div>
 
-        <div class="opacity-container">
-            <div class="slider-group">
-                <span class="slider-label">Transp. RTRW</span>
-                <input type="range" id="opacityRTRW" min="0" max="1" step="0.1" value="1">
+<div class="legend-toggle" onclick="toggleLegendPanel()"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></div>
+
+<div class="legend-panel" id="side-legend">
+    <div class="legend-header"><span>Legenda & Transparansi</span><span style="cursor:pointer" onclick="toggleLegendPanel()">×</span></div>
+    <div class="legend-content-wrapper" style="overflow-y: auto;">
+        
+        <div class="layer-manager-item">
+            <div class="layer-header-row" onclick="toggleDropdown('lsd-content')">
+                <div class="eye-icon" id="eye-lsd" onclick="toggleLyrVis(event, 'lsd-fill', 'eye-lsd')">👁</div>
+                <div class="layer-title">LSD Kab. Tabanan</div>
+                <div style="font-size: 9px;">▼</div>
             </div>
-            <div class="slider-group">
-                <span class="slider-label">Transp. LSD</span>
-                <input type="range" id="opacityLSD" min="0" max="1" step="0.1" value="1">
+            <div class="dropdown-content" id="lsd-content">
+                <div class="opacity-container">
+                    <span class="opacity-label">Transparansi</span>
+                    <input type="range" class="opacity-slider" min="0" max="100" value="70" oninput="updateOpacity('lsd-fill', this.value)">
+                </div>
+                <div id="lsd-legend-list"></div>
             </div>
         </div>
+
+        <div class="layer-manager-item">
+            <div class="layer-header-row" onclick="toggleDropdown('rdtr-content')">
+                <div class="eye-icon" id="eye-rdtr" onclick="toggleLyrVis(event, 'rdtr-fill', 'eye-rdtr')">👁</div>
+                <div class="layer-title">RDTR Perkotaan Tabanan</div>
+                <div style="font-size: 9px;">▼</div>
+            </div>
+            <div class="dropdown-content" id="rdtr-content">
+                <div class="opacity-container">
+                    <span class="opacity-label">Transparansi</span>
+                    <input type="range" class="opacity-slider" min="0" max="100" value="80" oninput="updateOpacity('rdtr-fill', this.value)">
+                </div>
+                <div id="rdtr-legend-list"></div>
+            </div>
+        </div>
+
+        <div class="layer-manager-item">
+            <div class="layer-header-row" onclick="toggleDropdown('selbar-content')">
+                <div class="eye-icon" id="eye-selbar" onclick="toggleLyrVis(event, 'rdtr-selbar-fill', 'eye-selbar')">👁</div>
+                <div class="layer-title">RDTR Kecamatan Selemadeg Barat</div>
+                <div style="font-size: 9px;">▼</div>
+            </div>
+            <div class="dropdown-content" id="selbar-content">
+                <div class="opacity-container">
+                    <span class="opacity-label">Transparansi</span>
+                    <input type="range" class="opacity-slider" min="0" max="100" value="80" oninput="updateOpacity('rdtr-selbar-fill', this.value)">
+                </div>
+                <div id="selbar-legend-list"></div>
+            </div>
+        </div>
+
+        <div class="layer-manager-item">
+            <div class="layer-header-row" onclick="toggleDropdown('rtrw-content')">
+                <div class="eye-icon" id="eye-rtrw" onclick="toggleLyrVis(event, 'rtrw-fill', 'eye-rtrw')">👁</div>
+                <div class="layer-title">RTRW Kabupaten Tabanan</div>
+                <div style="font-size: 9px;">▼</div>
+            </div>
+            <div class="dropdown-content" id="rtrw-content">
+                <div class="opacity-container">
+                    <span class="opacity-label">Transparansi</span>
+                    <input type="range" class="opacity-slider" min="0" max="100" value="80" oninput="updateOpacity('rtrw-fill', this.value)">
+                </div>
+                <div id="rtrw-legend-list"></div>
+            </div>
+        </div>
+
     </div>
+</div>
 
-    <div id="map"></div>
-
-    <div id="popup" class="ol-popup">
-        <a href="#" id="popup-closer" class="ol-popup-closer"></a>
-        <div id="popup-content"></div>
+<div class="coord-container">
+    <select id="crs-select" class="crs-picker" onchange="updateCoordLabels()">
+        <option value="wgs">WGS 84</option>
+        <option value="utm">UTM 50S</option>
+        <option value="tm3">TM-3 50.1</option>
+    </select>
+    <div class="display-data">
+        <div style="display:inline-block; margin-right:10px;"><span id="lbl-x" style="font-size:9px; color:#666; display:block;">Bujur (Lon)</span><span id="val-x" style="font-size:11px; font-weight:bold;">0.00000</span></div>
+        <div style="display:inline-block;"><span id="lbl-y" style="font-size:9px; color:#666; display:block;">Lintang (Lat)</span><span id="val-y" style="font-size:11px; font-weight:bold;">0.00000</span></div>
     </div>
+</div>
 
-    <script>
-        proj4.defs("EPSG:23880","+proj=tmerc +lat_0=0 +lon_0=115.5 +k=0.9999 +x_0=200000 +y_0=1500000 +ellps=WGS84 +units=m +no_defs");
-        proj4.defs("EPSG:32750","+proj=utm +zone=50 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
-        ol.proj.proj4.register(proj4);
+<div class="basemap-switcher">
+    <div class="bm-item active" id="btn-osm" onclick="changeBasemap('osm')"><img src="thumb-osm.jpg"><div class="bm-label">OSM</div></div>
+    <div class="bm-item" id="btn-esri" onclick="changeBasemap('esri')"><img src="thumb-citra.jpg"><div class="bm-label">SATELIT</div></div>
+</div>
 
-        const baseLayers = {
-            'osm': new ol.layer.Tile({ source: new ol.source.OSM(), visible: true }),
-            'arcgis': new ol.layer.Tile({ source: new ol.source.XYZ({ url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}' }), visible: false })
+<script>
+    const projUTM = "+proj=utm +zone=50 +south +datum=WGS84 +units=m +no_defs";
+    const projTM3 = "+proj=tmerc +lat_0=0 +lon_0=115.5 +k=0.9999 +x_0=200000 +y_0=1500000 +ellps=WGS84 +units=m +no_defs";
+    
+    const rtrwSimbo = {'Badan Air':'rgba(151,219,242,1.0)','Cagar Alam':'rgba(70,70,165,1.0)','Kawasan Hortikultura':'rgba(230,255,75,1.0)','Kawasan Hutan Lindung':'rgba(50,95,40,1.0)','Kawasan Pariwisata':'rgba(255,165,255,1.0)','Kawasan Perkebunan':'rgba(175,175,55,1.0)','Kawasan Perkebunan Rakyat':'rgba(155,220,155,1.0)','Kawasan Perlindungan Setempat':'rgba(5,215,215,1.0)','Kawasan Permukiman Perdesaan':'rgba(235,155,60,1.0)','Kawasan Permukiman Perkotaan':'rgba(245,155,30,1.0)','Kawasan Pertahanan dan Keamanan':'rgba(155,0,255,1.0)','Kawasan Peruntukan Industri':'rgba(105,0,0,1.0)','Kawasan Tanaman Pangan':'rgba(200,245,70,1.0)','Taman Wisata Alam':'rgba(210,190,255,1.0)'};
+    const rdtrSimbo = {'Badan Air':'rgba(151,219,242,1.0)','Badan Jalan':'rgba(235,30,30,1.0)','Instalasi Pengolahan Air Minum (IPAM)':'rgba(255,200,105,1.0)','Jalur Hijau':'rgba(15,245,0,1.0)','Kawasan Peruntukan Industri':'rgba(105,0,0,1.0)','Pemakaman':'rgba(90,255,0,1.0)','Perdagangan dan Jasa Skala Kota':'rgba(255,100,100,1.0)','Perdagangan dan Jasa Skala SWP':'rgba(255,165,165,1.0)','Perdagangan dan Jasa Skala WP':'rgba(255,130,130,1.0)','Pergudangan':'rgba(55,55,55,1.0)','Perkantoran':'rgba(155,155,155,1.0)','Perkebunan':'rgba(175,175,55,1.0)','Perlindungan Setempat':'rgba(5,215,215,1.0)','Pertahanan dan Keamanan':'rgba(155,0,255,1.0)','Perumahan Kepadatan Rendah':'rgba(255,250,75,1.0)','Perumahan Kepadatan Sedang':'rgba(255,240,5,1.0)','Perumahan Kepadatan Tinggi':'rgba(255,220,0,1.0)','Rimba Kota':'rgba(55,85,10,1.0)','SPU Skala Kota':'rgba(125,25,125,1.0)','SPU Skala Kecamatan':'rgba(155,50,155,1.0)','SPU Skala Kelurahan':'rgba(185,75,185,1.0)','SPU Skala RW':'rgba(215,100,215,1.0)','Taman Kota':'rgba(65,105,0,1.0)','Taman Kecamatan':'rgba(70,135,0,1.0)','Taman Kelurahan':'rgba(75,165,0,1.0)','Tanaman Pangan':'rgba(200,245,70,1.0)'};
+    const selbarSimbo = {'Badan Air': 'rgba(151,219,242,1.0)','Badan Jalan': 'rgba(235,30,30,1.0)','Hutan Lindung': 'rgba(50,95,40,1.0)','Kawasan Peruntukan Industri': 'rgba(105,0,0,1.0)','Pariwisata': 'rgba(255,165,255,1.0)','Pemakaman': 'rgba(90,255,0,1.0)','Perdagangan dan Jasa Skala SWP': 'rgba(255,165,165,1.0)','Perdagangan dan Jasa Skala WP': 'rgba(255,130,130,1.0)','Perkantoran': 'rgba(155,155,155,1.0)','Perkebunan': 'rgba(175,175,55,1.0)','Perkebunan Rakyat': 'rgba(155,220,155,1.0)','Perlindungan Setempat': 'rgba(5,215,215,1.0)','Perumahan Kepadatan Rendah': 'rgba(255,250,75,1.0)','Perumahan Kepadatan Sedang': 'rgba(255,240,5,1.0)','Peternakan': 'rgba(185,235,185,1.0)','SPU Skala Kecamatan': 'rgba(155,50,155,1.0)','SPU Skala Kelurahan': 'rgba(185,75,185,1.0)','Taman Kelurahan': 'rgba(75,165,0,1.0)','Taman RW': 'rgba(80,195,0,1.0)','Tanaman Pangan': 'rgba(200,245,70,1.0)'};
+
+    const map = new maplibregl.Map({
+        container: 'map',
+        style: { "version": 8, "sources": { "osm": { "type": "raster", "tiles": ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"], "tileSize": 256 }, "esri": { "type": "raster", "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], "tileSize": 256 } }, "layers": [{ "id": "esri-layer", "type": "raster", "source": "esri", "layout": { "visibility": "none" } },{ "id": "osm-layer", "type": "raster", "source": "osm", "layout": { "visibility": "visible" } }] },
+        center: [115.1277, -8.4543], zoom: 11
+    });
+
+    const searchMarker = new maplibregl.Marker({ color: 'red' });
+
+    map.on('load', () => {
+        map.addControl(new maplibregl.NavigationControl(), 'top-left');
+        map.addControl(new maplibregl.FullscreenControl(), 'top-left');
+        map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true, showUserHeading: true }), 'top-left');
+
+        map.addSource('rtrw-src', { 'type': 'geojson', 'data': 'RTRW_Tabanan_3.geojson' });
+        map.addSource('rdtr-src', { 'type': 'geojson', 'data': 'rdtr_perkot_tabanan.geojson' });
+        map.addSource('selbar-src', { 'type': 'geojson', 'data': 'rdtr_kec_selemadeg_barat.geojson' });
+        map.addSource('lsd-src', { 'type': 'geojson', 'data': 'lsd_kabtabanan.geojson' });
+
+        const addFill = (id, src, sim, def, op) => {
+            const match = ['match', ['get', 'NAMOBJ']];
+            for (const [k, v] of Object.entries(sim)) match.push(k, v);
+            match.push(def);
+            map.addLayer({ 'id': id, 'type': 'fill', 'source': src, 'paint': { 'fill-color': match, 'fill-opacity': op } });
         };
 
-        const rtrwData = {
-            'Badan Air': 'rgba(151,219,242,1.0)',
-            'Cagar Alam': 'rgba(70,70,165,1.0)',
-            'Kawasan Hortikultura': 'rgba(230,255,75,1.0)',
-            'Kawasan Hutan Lindung': 'rgba(50,95,40,1.0)',
-            'Kawasan Pariwisata': 'rgba(255,165,255,1.0)',
-            'Kawasan Perkebunan': 'rgba(175,175,55,1.0)',
-            'Kawasan Perkebunan Rakyat': 'rgba(155,220,155,1.0)',
-            'Kawasan Perlindungan Setempat': 'rgba(5,215,215,1.0)',
-            'Kawasan Permukiman Perdesaan': 'rgba(235,155,60,1.0)',
-            'Kawasan Permukiman Perkotaan': 'rgba(245,155,30,1.0)',
-            'Kawasan Pertahanan dan Keamanan': 'rgba(155,0,255,1.0)',
-            'Kawasan Peruntukan Industri': 'rgba(105,0,0,1.0)',
-            'Kawasan Tanaman Pangan': 'rgba(200,245,70,1.0)',
-            'Taman Wisata Alam': 'rgba(210,190,255,1.0)'
+        addFill('rtrw-fill', 'rtrw-src', rtrwSimbo, 'rgba(200,200,200,0.5)', 0.8);
+        addFill('rdtr-fill', 'rdtr-src', rdtrSimbo, 'rgba(192,250,246,1.0)', 0.8);
+        addFill('rdtr-selbar-fill', 'selbar-src', selbarSimbo, 'rgba(217,245,208,1.0)', 0.8);
+        map.addLayer({ 'id': 'lsd-fill', 'type': 'fill', 'source': 'lsd-src', 'paint': { 'fill-color': 'rgba(255, 85, 0, 1.0)', 'fill-opacity': 0.7 } });
+
+        renderLgd('lsd-legend-list', {'Lahan Sawah Dilindungi': 'rgba(255, 85, 0, 1.0)'});
+        renderLgd('rtrw-legend-list', rtrwSimbo);
+        renderLgd('rdtr-legend-list', rdtrSimbo);
+        renderLgd('selbar-legend-list', selbarSimbo);
+    });
+
+    // FUNGSI TRANSPARANSI
+    function updateOpacity(lyr, val) {
+        const opacity = parseFloat(val) / 100;
+        if (map.getLayer(lyr)) {
+            map.setPaintProperty(lyr, 'fill-opacity', opacity);
+        }
+    }
+
+    map.on('click', (e) => {
+        const layers = ['lsd-fill', 'rdtr-fill', 'rdtr-selbar-fill', 'rtrw-fill'];
+        const features = map.queryRenderedFeatures(e.point, { layers: layers });
+        if (!features.length) return;
+
+        let popupHtml = `<div class="pop-container">`;
+        features.forEach(f => {
+            let layerTitle = "Informasi";
+            let color = "gray";
+            let mainInfo = f.properties.NAMOBJ || "Tidak Ada Data";
+            let extraStatus = "";
+            const props = f.properties;
+
+            if(f.layer.id === 'lsd-fill') { 
+                layerTitle = "Informasi LSD"; color = 'rgba(255, 85, 0, 1.0)'; 
+                mainInfo = props.LSD === "Lahan Sawah Yang diLindungi di luar kawasan hutan" ? "Berada Pada LSD" : "Tidak Berada pada LSD";
+            } 
+            else if(f.layer.id === 'rtrw-fill') { 
+                layerTitle = "RTRW Kabupaten Tabanan"; color = rtrwSimbo[mainInfo] || '#ccc'; 
+                extraStatus = props.KP2B_2 === "Ada" ? `<span class="pop-sub" style="color:#d35400; font-weight:bold;">✓ Berada pada KP2B</span>` : `<span class="pop-sub">✗ Tidak Berada KP2B</span>`;
+            } 
+            else if(f.layer.id === 'rdtr-fill') { layerTitle = "RDTR Perkotaan Tabanan"; color = rdtrSimbo[mainInfo] || '#ccc'; } 
+            else if(f.layer.id === 'rdtr-selbar-fill') { layerTitle = "RDTR Kecamatan Selemadeg Barat"; color = selbarSimbo[mainInfo] || '#ccc'; }
+
+            popupHtml += `
+                <div class="pop-section">
+                    <div class="pop-header-title"><span>${layerTitle}</span></div>
+                    <div class="pop-info-box">
+                        <div class="pop-swatch" style="background:${color}"></div>
+                        <div class="pop-details">
+                            <span class="pop-obj-name">${mainInfo}</span>
+                            ${extraStatus} 
+                            ${props.KECAMATAN ? `<span class="pop-sub">Kec. ${props.KECAMATAN}</span>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+        });
+        popupHtml += `</div>`;
+        new maplibregl.Popup({ offset: [0, -10] }).setLngLat(e.lngLat).setHTML(popupHtml).addTo(map);
+    });
+
+    map.on('mousemove', (e) => {
+        // Daftar layer yang ingin dicek
+        const layersToCheck = ['lsd-fill', 'rdtr-fill', 'rdtr-selbar-fill', 'rtrw-fill'];
+        
+        // Filter hanya layer yang benar-benar sudah ada di dalam peta
+        const existingLayers = layersToCheck.filter(lyr => map.getLayer(lyr));
+
+        if (existingLayers.length > 0) {
+            const features = map.queryRenderedFeatures(e.point, { layers: existingLayers });
+            map.getCanvas().style.cursor = features.length ? 'pointer' : '';
+        }
+
+        // Logika koordinat tetap sama
+        const { lng, lat } = e.lngLat;
+        const c = document.getElementById('crs-select').value;
+        let x = lng, y = lat;
+        if (c === 'utm') [x, y] = proj4('WGS84', projUTM, [lng, lat]);
+        if (c === 'tm3') [x, y] = proj4('WGS84', projTM3, [lng, lat]);
+        document.getElementById('val-x').innerText = x.toFixed(5);
+        document.getElementById('val-y').innerText = y.toFixed(5);
+    });
+
+    function setSearchMode(m) { 
+        searchMode = m; 
+        
+        const inputField = document.getElementById('search-input');
+        const addrPill = document.getElementById('mode-addr');
+        const coordPill = document.getElementById('mode-coord');
+
+        if (m === 'address') {
+            addrPill.className = 'mode-pill active';
+            coordPill.className = 'mode-pill';
+            inputField.placeholder = "Cari alamat atau tempat...";
+        } else {
+            addrPill.className = 'mode-pill';
+            coordPill.className = 'mode-pill active';
+            inputField.placeholder = "Format: Lintang, Bujur (Contoh: -8.45, 115.12)";
+        }
+    }
+    function toggleLyrVis(e, lyr, ico) { e.stopPropagation(); const v = map.getLayoutProperty(lyr, 'visibility') !== 'none'; map.setLayoutProperty(lyr, 'visibility', v ? 'none' : 'visible'); document.getElementById(ico).classList.toggle('off', v); }
+    function toggleDropdown(id) { document.getElementById(id).classList.toggle('active'); }
+    function toggleLegendPanel() { document.getElementById('side-legend').classList.toggle('active'); }
+    function renderLgd(id, sim) { const c = document.getElementById(id); Object.entries(sim).forEach(([n, col]) => { c.innerHTML += `<div class="legend-item"><div class="legend-color" style="background:${col}"></div><span>${n}</span></div>`; }); }
+    function changeBasemap(t) { map.setLayoutProperty('osm-layer', 'visibility', t==='osm'?'visible':'none'); map.setLayoutProperty('esri-layer', 'visibility', t==='esri'?'visible':'none'); document.getElementById('btn-osm').className = t==='osm'?'bm-item active':'bm-item'; document.getElementById('btn-esri').className = t==='esri'?'bm-item active':'bm-item'; }
+    function updateCoordLabels() { const c = document.getElementById('crs-select').value; document.getElementById('lbl-x').innerText = c === 'wgs' ? "Bujur (Lon)" : "Timur (X)"; document.getElementById('lbl-y').innerText = c === 'wgs' ? "Lintang (Lat)" : "Utara (Y)"; }
+
+    // 1. Tambahkan deklarasi variabel global ini di luar fungsi
+    let searchMode = 'address'; 
+
+    // 2. Gunakan fungsi handleSearch yang sudah mendukung auto-popup
+    function handleSearch() {
+        const val = document.getElementById('search-input').value; 
+        if(!val) return;
+
+        const showPopupAtCoord = (lngLat) => {
+            // Tunggu sebentar sampai gerakan flyTo selesai
+            setTimeout(() => {
+                const point = map.project(lngLat);
+                // Memicu event klik otomatis agar popup muncul
+                map.fire('click', { lngLat: lngLat, point: point });
+            }, 800); 
         };
 
-        const lsdColor = 'rgba(255, 85, 0, 0.7)'; 
-        const lsdStroke = 'rgba(255, 85, 0, 1.0)';
-
-        const tataruangLayer = new ol.layer.Vector({
-            source: new ol.source.Vector({
-                url: 'https://api.maptiler.com/data/019c0858-a8d2-7d23-8d8c-d0fcb2f62898/features.json?key=rQCoMBjxgrq4YAZGqBKF',
-                format: new ol.format.GeoJSON()
-            }),
-            renderMode: 'image',
-            zIndex: 2,
-            style: function(feature) {
-                const val = feature.get("NAMOBJ");
-                const color = rtrwData[val] || 'rgba(200,200,200,0.5)';
-                return new ol.style.Style({
-                    fill: new ol.style.Fill({ color: color }),
-                    stroke: new ol.style.Stroke({ color: 'rgba(110,110,110,0.5)', width: 0.5 })
-                });
+        if(searchMode === 'coordinate') {
+            // Format input koordinat: lat, lon (contoh: -8.45, 115.12)
+            const p = val.split(',').map(Number); 
+            if(p.length === 2) { 
+                const loc = [p[1], p[0]]; // MapLibre butuh [Lon, Lat]
+                map.flyTo({center: loc, zoom: 17}); 
+                searchMarker.setLngLat(loc).addTo(map);
+                showPopupAtCoord(loc);
             }
-        });
-
-        const lsdLayer = new ol.layer.Vector({
-            source: new ol.source.Vector({
-                url: 'LSD_Tabanan.geojson',
-                format: new ol.format.GeoJSON()
-            }),
-            zIndex: 3, // Diletakkan di atas RTRW agar Orennya jelas terlihat saat ditumpuk
-            style: new ol.style.Style({
-                fill: new ol.style.Fill({ color: lsdColor }),
-                stroke: new ol.style.Stroke({ color: lsdStroke, width: 1 })
-            })
-        });
-
-        const markerSource = new ol.source.Vector();
-        const markerLayer = new ol.layer.Vector({
-            source: markerSource, zIndex: 100,
-            style: new ol.style.Style({ image: new ol.style.Icon({ anchor: [0.5, 1], src: 'https://img.icons8.com/color/48/000000/marker.png', scale: 0.8 }) })
-        });
-
-        const mousePositionControl = new ol.control.MousePosition({
-            coordinateFormat: (coord) => `Lon: ${coord[0].toFixed(5)} | Lat: ${coord[1].toFixed(5)}`,
-            projection: 'EPSG:4326', target: document.getElementById('mouse-position'), undefinedHTML: 'Gerakkan Kursor'
-        });
-
-        const map = new ol.Map({
-            target: 'map',
-            layers: [baseLayers.osm, baseLayers.arcgis, tataruangLayer, lsdLayer, markerLayer],
-            view: new ol.View({ center: ol.proj.fromLonLat([115.1251, -8.4554]), zoom: 11 }),
-            controls: ol.control.defaults.defaults({ attribution: false }).extend([mousePositionControl])
-        });
-
-        const overlay = new ol.Overlay({ element: document.getElementById('popup'), autoPan: true });
-        map.addOverlay(overlay);
-        document.getElementById('popup-closer').onclick = () => { overlay.setPosition(undefined); return false; };
-
-        map.on('singleclick', function (evt) {
-            const feature = map.forEachFeatureAtPixel(evt.pixel, (feat) => feat);
-            if (feature) {
-                const props = feature.getProperties();
-                let content = `<div style="border-bottom: 2px solid #003366; margin-bottom: 8px; padding-bottom: 5px;"><b style="font-size: 14px; color: #003366;">DETAIL INFORMASI</b></div><div style="font-size: 13px;">`;
-                if(props.NAMOBJ) content += `<b>RTRW :</b> ${props.NAMOBJ}<br>`;
-                if(props.LSD) content += `<b>LSD :</b> <span style="color:#ff5500; font-weight:bold;">${props.LSD}</span><br>`;
-                content += `<hr style="border: 0; border-top: 1px solid #eee; margin: 8px 0;"><small style="color: #888;">Kabupaten Tabanan</small></div>`;
-                document.getElementById('popup-content').innerHTML = content;
-                overlay.setPosition(evt.coordinate);
-            } else { overlay.setPosition(undefined); }
-        });
-
-        function generateLegend() {
-            const listContainer = document.getElementById('legendList');
-            listContainer.innerHTML = ""; 
-            const headerLsd = document.createElement('div');
-            headerLsd.innerHTML = `<p style="margin:5px 0; font-weight:bold; border-bottom:1px solid #ccc; color:#ff5500;">LAYER LSD</p>`;
-            listContainer.appendChild(headerLsd);
-            const lsdItem = document.createElement('div');
-            lsdItem.style.display = 'flex'; lsdItem.style.alignItems = 'center'; lsdItem.style.marginBottom = '8px';
-            lsdItem.innerHTML = `<div style="width:14px; height:14px; background:${lsdColor}; margin-right:8px; border:1px solid ${lsdStroke};"></div><span style="font-weight:bold;">Lahan Sawah Dilindungi</span>`;
-            listContainer.appendChild(lsdItem);
-            const headerRtrw = document.createElement('div');
-            headerRtrw.innerHTML = `<p style="margin:10px 0 5px; font-weight:bold; border-bottom:1px solid #ccc; color:#003366;">LAYER RTRW</p>`;
-            listContainer.appendChild(headerRtrw);
-            for (const [nama, warna] of Object.entries(rtrwData)) {
-                const div = document.createElement('div');
-                div.style.display = 'flex'; div.style.alignItems = 'center'; div.style.marginBottom = '4px';
-                div.innerHTML = `<div style="width:12px; height:12px; background:${warna}; margin-right:8px; border:0.5px solid #000;"></div><span>${nama}</span>`;
-                listContainer.appendChild(div);
-            }
+        } else {
+            // Pencarian Alamat
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${val}&viewbox=114.8,-8.6,115.5,-8.1&bounded=1`)
+            .then(r => r.json())
+            .then(d => { 
+                if(d[0]) { 
+                    const loc = [parseFloat(d[0].lon), parseFloat(d[0].lat)]; 
+                    map.flyTo({center: loc, zoom: 17}); 
+                    searchMarker.setLngLat(loc).addTo(map);
+                    showPopupAtCoord(loc);
+                } 
+            });
         }
-        generateLegend();
-
-        function toggleLayerMenu() {
-            const m = document.getElementById('layer-window');
-            m.style.display = (m.style.display === 'block') ? 'none' : 'block';
-        }
-
-        function toggleLegendMenu() {
-            const list = document.getElementById('legendList');
-            const arrow = document.getElementById('leg-arrow');
-            const btnText = document.querySelector('#btn-legend span');
-            if (list.style.display === "none" || list.style.display === "") {
-                list.style.display = "block"; arrow.innerText = "▲"; btnText.innerText = "SEMBUNYIKAN LEGENDA";
-            } else {
-                list.style.display = "none"; arrow.innerText = "▼"; btnText.innerText = "TAMPILKAN LEGENDA";
-            }
-        }
-
-        function changeBasemap(val) {
-            baseLayers.osm.setVisible(val === 'osm');
-            baseLayers.arcgis.setVisible(val === 'arcgis');
-        }
-
-        // KONTROL VISIBILITAS & SLIDER
-        document.getElementById('toggleRTRW').onchange = (e) => tataruangLayer.setVisible(e.target.checked);
-        document.getElementById('toggleLSD').onchange = (e) => lsdLayer.setVisible(e.target.checked);
-
-        document.getElementById('opacityRTRW').oninput = (e) => tataruangLayer.setOpacity(parseFloat(e.target.value));
-        document.getElementById('opacityLSD').oninput = (e) => lsdLayer.setOpacity(parseFloat(e.target.value));
-
-        function switchMode(mode) {
-            document.getElementById('box-addr').style.display = mode === 'addr' ? 'block' : 'none';
-            document.getElementById('box-coord').style.display = mode === 'coord' ? 'block' : 'none';
-            document.getElementById('btn-mode-addr').className = mode === 'addr' ? 'mode-btn active' : 'mode-btn';
-            document.getElementById('btn-mode-coord').className = mode === 'coord' ? 'mode-btn active' : 'mode-btn';
-        }
-
-        function executeSearch() {
-            if (document.getElementById('box-addr').style.display !== 'none') {
-                const q = document.getElementById('input-addr').value;
-                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}&viewbox=114.4,-8.0,115.8,-8.9&bounded=1`)
-                    .then(r => r.json()).then(d => {
-                        if (d[0]) {
-                            const c = ol.proj.fromLonLat([+d[0].lon, +d[0].lat]);
-                            markerSource.clear();
-                            markerSource.addFeature(new ol.Feature({ geometry: new ol.geom.Point(c) }));
-                            map.getView().animate({ center: c, zoom: 17 });
-                        }
-                    });
-            } else {
-                const x = parseFloat(document.getElementById('input-x').value);
-                const y = parseFloat(document.getElementById('input-y').value);
-                if (!isNaN(x) && !isNaN(y)) {
-                    const sys = document.querySelector('input[name="coord_sys"]:checked').value;
-                    let c;
-                    if (sys === 'utm') c = ol.proj.transform([x, y], 'EPSG:32750', 'EPSG:3857');
-                    else if (sys === 'tm3') c = ol.proj.transform([x, y], 'EPSG:23880', 'EPSG:3857');
-                    else c = ol.proj.fromLonLat([x, y]);
-                    markerSource.clear(); markerSource.addFeature(new ol.Feature({ geometry: new ol.geom.Point(c) }));
-                    map.getView().animate({ center: c, zoom: 17 });
-                }
-            }
-        }
-
-        let watchId = null;
-        function getMyLocation() {
-            const btn = document.getElementById('gps-btn');
-            if (!navigator.geolocation) return alert("GPS tidak didukung");
-            if (watchId !== null) {
-                navigator.geolocation.clearWatch(watchId); watchId = null; markerSource.clear();
-                btn.classList.remove('gps-active'); return;
-            }
-            btn.classList.add('gps-active');
-            watchId = navigator.geolocation.watchPosition((pos) => {
-                const olCoords = ol.proj.fromLonLat([pos.coords.longitude, pos.coords.latitude]);
-                const gpsFeat = new ol.Feature({ geometry: new ol.geom.Point(olCoords) });
-                gpsFeat.setStyle(new ol.style.Style({ image: new ol.style.Circle({ radius: 8, fill: new ol.style.Fill({ color: '#2196F3' }), stroke: new ol.style.Stroke({ color: 'white', width: 3 }) }) }));
-                markerSource.clear(); markerSource.addFeature(gpsFeat);
-                map.getView().animate({ center: olCoords, zoom: 17 });
-            }, () => {}, { enableHighAccuracy: true });
-        }
-
-        document.querySelectorAll('input[name="coord_sys"]').forEach(i => i.onchange = function() {
-            const val = this.value;
-            if (val === 'utm') {
-                mousePositionControl.setProjection('EPSG:32750');
-                mousePositionControl.setCoordinateFormat((c) => `UTM X: ${c[0].toFixed(2)} | Y: ${c[1].toFixed(2)}`);
-            } else if (val === 'tm3') {
-                mousePositionControl.setProjection('EPSG:23880');
-                mousePositionControl.setCoordinateFormat((c) => `TM3 X: ${c[0].toFixed(3)} | Y: ${c[1].toFixed(3)}`);
-            } else {
-                mousePositionControl.setProjection('EPSG:4326');
-                mousePositionControl.setCoordinateFormat((c) => `Lon: ${c[0].toFixed(5)} | Lat: ${c[1].toFixed(5)}`);
-            }
-        });
-    </script>
+    }
+</script>
 </body>
 </html>
