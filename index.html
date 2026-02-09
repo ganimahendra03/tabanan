@@ -283,11 +283,23 @@
         if (!val) return;
 
         if (searchMode === 'address') {
-            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${val}&viewbox=114.43,-8.50,115.30,-8.15&bounded=1`)
-                .then(r => r.json()).then(d => { 
-                    if(d.length > 0) gotoLocation(parseFloat(d[0].lon), parseFloat(d[0].lat)); 
-                });
-        } else {
+    // URL Photon lebih ringkas dan cepat
+    // Kita batasi (bbox) di sekitar koordinat Bali: 114.4,-8.8 ke 115.5,-8.1
+    const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(val)}&bbox=114.4,-8.8,115.5,-8.1&limit=5`;
+
+    fetch(photonUrl)
+        .then(r => r.json())
+        .then(d => {
+            if (d.features && d.features.length > 0) {
+                // Photon strukturnya GeoJSON: [longitude, latitude]
+                const [lon, lat] = d.features[0].geometry.coordinates;
+                gotoLocation(lon, lat);
+            } else {
+                console.log("Lokasi tidak ditemukan di Photon");
+            }
+        })
+        .catch(err => console.error("Error Photon:", err));
+        }  else {
             // Logika Koordinat
             const parts = val.split(/[ ,]+/).map(Number);
             if (parts.length === 2) {
@@ -401,3 +413,4 @@
 </script>
 </body>
 </html>
+
