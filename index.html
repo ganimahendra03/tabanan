@@ -100,6 +100,22 @@
 <div class="legend-panel" id="side-legend">
     <div class="legend-header"><span>Legenda</span><span style="cursor:pointer" onclick="toggleLegendPanel()">×</span></div>
     <div class="legend-content-wrapper" style="overflow-y: auto;">
+        
+        <div class="layer-manager-item">
+            <div class="layer-header-row" onclick="toggleDropdown('znt-content')">
+                <div class="eye-icon off" id="eye-znt" onclick="toggleLyrVis(event, 'znt-fill', 'eye-znt')">👁</div>
+                <div class="layer-title">Zona Nilai Tanah 2025</div>
+                <div style="font-size: 9px;">▼</div>
+            </div>
+            <div class="dropdown-content" id="znt-content">
+                <div class="opacity-container">
+                    <span class="opacity-label">Transparansi</span>
+                    <input type="range" class="opacity-slider" min="0" max="100" value="70" oninput="updateOpacity('znt-fill', this.value)">
+                </div>
+                <div id="znt-legend-list"></div>
+            </div>
+        </div>
+
         <div class="layer-manager-item">
             <div class="layer-header-row" onclick="toggleDropdown('lsd-content')">
                 <div class="eye-icon" id="eye-lsd" onclick="toggleLyrVis(event, 'lsd-fill', 'eye-lsd')">👁</div>
@@ -114,6 +130,7 @@
                 <div id="lsd-legend-list"></div>
             </div>
         </div>
+
         <div class="layer-manager-item">
             <div class="layer-header-row" onclick="toggleDropdown('lbs-content')">
                 <div class="eye-icon" id="eye-lbs" onclick="toggleLyrVis(event, 'lbs-fill', 'eye-lbs')">👁</div>
@@ -122,6 +139,7 @@
             </div>
             <div class="dropdown-content" id="lbs-content"><div id="lbs-legend-list"></div></div>
         </div>
+
         <div class="layer-manager-item">
             <div class="layer-header-row" onclick="toggleDropdown('rdtr-content')">
                 <div class="eye-icon" id="eye-rdtr" onclick="toggleLyrVis(event, 'rdtr-fill', 'eye-rdtr')">👁</div>
@@ -130,6 +148,7 @@
             </div>
             <div class="dropdown-content" id="rdtr-content"><div id="rdtr-legend-list"></div></div>
         </div>
+
         <div class="layer-manager-item">
             <div class="layer-header-row" onclick="toggleDropdown('selbar-content')">
                 <div class="eye-icon" id="eye-selbar" onclick="toggleLyrVis(event, 'rdtr-selbar-fill', 'eye-selbar')">👁</div>
@@ -138,6 +157,7 @@
             </div>
             <div class="dropdown-content" id="selbar-content"><div id="selbar-legend-list"></div></div>
         </div>
+
         <div class="layer-manager-item">
             <div class="layer-header-row" onclick="toggleDropdown('rtrw-content')">
                 <div class="eye-icon" id="eye-rtrw" onclick="toggleLyrVis(event, 'rtrw-fill', 'eye-rtrw')">👁</div>
@@ -146,6 +166,7 @@
             </div>
             <div class="dropdown-content" id="rtrw-content"><div id="rtrw-legend-list"></div></div>
         </div>
+
     </div>
 </div>
 
@@ -173,6 +194,18 @@
     const lbsFillColor = 'rgba(230,255,75,1.0)';
     const lbsStrokeColor = 'rgba(170,255,110,1.0)';
 
+    // --- SIMBOLOGI ZNT ---
+    const zntSimbo = {
+        '< Rp. 100.000': 'rgba(56,168,80,1.0)',
+        'Rp. 100.001 - Rp. 200.000': 'rgba(102,191,80,1.0)',
+        'Rp. 200.001 - Rp. 400.000': 'rgba(155,217,80,1.0)',
+        'Rp. 400.001 - Rp. 800.000': 'rgba(222,242,80,1.0)',
+        'Rp. 800.001 - Rp. 1.000.000': 'rgba(225,221,80,1.0)',
+        'Rp. 1.000.001 - Rp. 2.000.000': 'rgba(255,145,80,1.0)',
+        'Rp. 2.000.001 - Rp. 4.000.000': 'rgba(255,72,80,1.0)',
+        '> Rp. 4.000.000': 'rgba(255,0,80,1.0)'
+    };
+
     const rtrwSimbo = {'Badan Air':'rgba(151,219,242,1.0)','Cagar Alam':'rgba(70,70,165,1.0)','Kawasan Hortikultura':'rgba(230,255,75,1.0)','Kawasan Hutan Lindung':'rgba(50,95,40,1.0)','Kawasan Pariwisata':'rgba(255,165,255,1.0)','Kawasan Perkebunan':'rgba(175,175,55,1.0)','Kawasan Perkebunan Rakyat':'rgba(155,220,155,1.0)','Kawasan Perlindungan Setempat':'rgba(5,215,215,1.0)','Kawasan Permukiman Perdesaan':'rgba(235,155,60,1.0)','Kawasan Permukiman Perkotaan':'rgba(245,155,30,1.0)','Kawasan Pertahanan dan Keamanan':'rgba(155,0,255,1.0)','Kawasan Peruntukan Industri':'rgba(105,0,0,1.0)','Kawasan Tanaman Pangan':'rgba(200,245,70,1.0)','Taman Wisata Alam':'rgba(210,190,255,1.0)'};
     const rdtrSimbo = {'Badan Air':'rgba(151,219,242,1.0)','Badan Jalan':'rgba(235,30,30,1.0)','Instalasi Pengolahan Air Minum (IPAM)':'rgba(255,200,105,1.0)','Jalur Hijau':'rgba(15,245,0,1.0)','Kawasan Peruntukan Industri':'rgba(105,0,0,1.0)','Pemakaman':'rgba(90,255,0,1.0)','Perdagangan dan Jasa Skala Kota':'rgba(255,100,100,1.0)','Perdagangan dan Jasa Skala SWP':'rgba(255,165,165,1.0)','Perdagangan dan Jasa Skala WP':'rgba(255,130,130,1.0)','Pergudangan':'rgba(55,55,55,1.0)','Perkantoran':'rgba(155,155,155,1.0)','Perkebunan':'rgba(175,175,55,1.0)','Perlindungan Setempat':'rgba(5,215,215,1.0)','Pertahanan dan Keamanan':'rgba(155,0,255,1.0)','Perumahan Kepadatan Rendah':'rgba(255,250,75,1.0)','Perumahan Kepadatan Sedang':'rgba(255,240,5,1.0)','Perumahan Kepadatan Tinggi':'rgba(255,220,0,1.0)','Rimba Kota':'rgba(55,85,10,1.0)','SPU Skala Kota':'rgba(125,25,125,1.0)','SPU Skala Kecamatan':'rgba(155,50,155,1.0)','SPU Skala Kelurahan':'rgba(185,75,185,1.0)','SPU Skala RW':'rgba(215,100,215,1.0)','Taman Kota':'rgba(65,105,0,1.0)','Taman Kecamatan':'rgba(70,135,0,1.0)','Taman Kelurahan':'rgba(75,165,0,1.0)','Tanaman Pangan':'rgba(200,245,70,1.0)'};
     const selbarSimbo = {'Badan Air': 'rgba(151,219,242,1.0)','Badan Jalan': 'rgba(235,30,30,1.0)','Hutan Lindung': 'rgba(50,95,40,1.0)','Kawasan Peruntukan Industri': 'rgba(105,0,0,1.0)','Pariwisata': 'rgba(255,165,255,1.0)','Pemakaman': 'rgba(90,255,0,1.0)','Perdagangan dan Jasa Skala SWP': 'rgba(255,165,165,1.0)','Perdagangan dan Jasa Skala WP': 'rgba(255,130,130,1.0)','Perkantoran': 'rgba(155,155,155,1.0)','Perkebunan': 'rgba(175,175,55,1.0)','Perkebunan Rakyat': 'rgba(155,220,155,1.0)','Perlindungan Setempat': 'rgba(5,215,215,1.0)','Perumahan Kepadatan Rendah': 'rgba(255,250,75,1.0)','Perumahan Kepadatan Sedang': 'rgba(255,240,5,1.0)','Peternakan': 'rgba(185,235,185,1.0)','SPU Skala Kecamatan': 'rgba(155,50,155,1.0)','SPU Skala Kelurahan': 'rgba(185,75,185,1.0)','Taman Kelurahan': 'rgba(75,165,0,1.0)','Taman RW': 'rgba(80,195,0,1.0)','Tanaman Pangan': 'rgba(200,245,70,1.0)'};
@@ -183,7 +216,6 @@
         center: [115.1277, -8.4543], zoom: 10
     });
 
-    const searchMarker = new maplibregl.Marker({ color: 'red' });
     const searchInput = document.getElementById('search-input');
     const suggestBox = document.getElementById('suggest-box');
     let searchMode = 'address'; 
@@ -193,6 +225,8 @@
         map.addControl(new maplibregl.FullscreenControl(), 'top-left');
         map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true, showUserHeading: true }), 'top-left');
 
+        // --- LOAD SOURCES ---
+        map.addSource('znt-src', { 'type': 'geojson', 'data': 'znt_tabanan_2025.geojson' });
         map.addSource('lbs-src', { 'type': 'geojson', 'data': 'lbs_tabanan.geojson' });
         map.addSource('rtrw-src', { 'type': 'geojson', 'data': 'RTRW_Tabanan_3.geojson' });
         map.addSource('rdtr-src', { 'type': 'geojson', 'data': 'rdtr_perkot_tabanan.geojson' });
@@ -206,12 +240,38 @@
             map.addLayer({ 'id': id, 'type': 'fill', 'source': src, 'paint': { 'fill-color': match, 'fill-opacity': op } });
         };
 
+        // --- ADD LAYERS ---
+        // ZNT diletakkan paling bawah tapi posisi MATI (visibility: none)
+        map.addLayer({
+            'id': 'znt-fill',
+            'type': 'fill',
+            'source': 'znt-src',
+            'layout': { 'visibility': 'none' }, // MATI SAAT BUKA WEB
+            'paint': {
+                'fill-color': [
+                    'step', ['get', 'MEAN'],
+                    'rgba(56,168,80,1.0)', 100000.000001, 
+                    'rgba(102,191,80,1.0)', 200000.000001,
+                    'rgba(155,217,80,1.0)', 400000.000001,
+                    'rgba(222,242,80,1.0)', 800000.000001,
+                    'rgba(225,221,80,1.0)', 1000000.000001,
+                    'rgba(255,145,80,1.0)', 2000000.000001,
+                    'rgba(255,72,80,1.0)', 4000000.000001,
+                    'rgba(255,0,80,1.0)'
+                ],
+                'fill-opacity': 0.7,
+                'fill-outline-color': 'rgba(156,156,156,1.0)'
+            }
+        });
+
         map.addLayer({ 'id': 'lbs-fill', 'type': 'fill', 'source': 'lbs-src', 'paint': { 'fill-color': lbsFillColor, 'fill-opacity': 0.8, 'fill-outline-color': lbsStrokeColor } });
         addFill('rtrw-fill', 'rtrw-src', rtrwSimbo, 'rgba(200,200,200,0.5)', 0.8);
         addFill('rdtr-fill', 'rdtr-src', rdtrSimbo, 'rgba(192,250,246,1.0)', 0.8);
         addFill('rdtr-selbar-fill', 'selbar-src', selbarSimbo, 'rgba(217,245,208,1.0)', 0.8);
         map.addLayer({ 'id': 'lsd-fill', 'type': 'fill', 'source': 'lsd-src', 'paint': { 'fill-color': 'rgba(255, 85, 0, 1.0)', 'fill-opacity': 0.7, 'fill-outline-color': '#ffffff' } });
 
+        // --- RENDER LEGENDS ---
+        renderLgd('znt-legend-list', zntSimbo); // Pastikan ada <div id="znt-legend-list"> di HTML
         renderLgd('lbs-legend-list', {'Lahan Baku Sawah (LBS)': lbsFillColor});
         renderLgd('lsd-legend-list', {'Lahan Sawah Dilindungi': 'rgba(255, 85, 0, 1.0)'});
         renderLgd('rtrw-legend-list', rtrwSimbo);
@@ -219,44 +279,121 @@
         renderLgd('selbar-legend-list', selbarSimbo);
     });
 
-    // --- LOGIC SMART POPUP ---
-    function triggerPopup(lngLat) {
+    // --- LOGIC SUPER POPUP ---
+    async function triggerPopup(lngLat) {
+        const { lng, lat } = lngLat;
+        const utm = proj4('WGS84', projUTM, [lng, lat]);
+        const tm3 = proj4('WGS84', projTM3, [lng, lat]);
+
+        let alamat = "Mencari alamat...";
+        try {
+            const resp = await fetch(`https://photon.komoot.io/reverse?lon=${lng}&lat=${lat}`);
+            const data = await resp.json();
+            if (data.features && data.features.length > 0) {
+                const p = data.features[0].properties;
+                alamat = [p.name, p.street, p.district, p.city].filter(Boolean).join(", ") || "Lokasi tanpa nama";
+            } else { alamat = "Alamat tidak ditemukan"; }
+        } catch (err) { alamat = "Gagal memuat alamat"; }
+
         const point = map.project(lngLat);
-        const layers = ['lsd-fill', 'lbs-fill', 'rdtr-fill', 'rdtr-selbar-fill', 'rtrw-fill'];
+        // Tambahkan znt-fill ke array layers
+        const layers = ['lsd-fill', 'lbs-fill', 'rdtr-fill', 'rdtr-selbar-fill', 'rtrw-fill', 'znt-fill'];
         const features = map.queryRenderedFeatures(point, { layers: layers.filter(l => map.getLayer(l)) });
-        if (!features.length) return;
 
         let popupHtml = `<div class="pop-container">`;
-        features.forEach(f => {
-            const props = f.properties;
-            const lid = f.layer.id;
-            let layerTitle = "Informasi", color = "gray", mainInfo = props.NAMOBJ || "Tidak Ada Data";
 
-            if(lid === 'lbs-fill') { layerTitle = "Informasi Lahan Baku Sawah"; color = lbsFillColor; mainInfo = "Berada Pada Lahan Baku Sawah"; }
-            else if(lid === 'lsd-fill') { layerTitle = "Informasi Lahan Sawah Dilindungi"; color = 'rgba(255, 85, 0, 1.0)'; mainInfo = props.LSD ? "Berada Pada Lahan Sawah Dilindungi" : "Tidak Berada pada LSD"; } 
-            else if(lid === 'rtrw-fill') { layerTitle = "Informasi RTRW Kabupaten Tabanan"; color = rtrwSimbo[mainInfo] || '#ccc'; } 
-            else if(lid === 'rdtr-fill') { layerTitle = "Informasi RDTR Perkotaan Tabanan"; color = rdtrSimbo[mainInfo] || '#ccc'; } 
-            else if(lid === 'rdtr-selbar-fill') { layerTitle = "Informasi RDTR Kecamatan Selemadeg Barat"; color = selbarSimbo[mainInfo] || '#ccc'; }
+        // SEKSI INFO LOKASI (Koordinat)
+        popupHtml += `
+            <div class="pop-section">
+                <div class="pop-header-title"><span>📍 INFORMASI LOKASI</span></div>
+                <div class="pop-info-box">
+                    <div class="pop-details">
+                        <span class="pop-obj-name" style="font-size:12px; margin-bottom:5px;">${alamat}</span>
+                        <div style="font-size: 10px; color: #444; background: #f4f4f4; padding: 6px; border-radius: 4px; border: 1px solid #ddd;">
+                            <table style="width:100%; border-collapse:collapse;">
+                                <tr><td><b>WGS84</b></td><td>: ${lat.toFixed(6)}, ${lng.toFixed(6)}</td></tr>
+                                <tr><td><b>UTM 50S</b></td><td>: ${utm[0].toFixed(2)}, ${utm[1].toFixed(2)}</td></tr>
+                                <tr><td><b>TM-3</b></td><td>: ${tm3[0].toFixed(2)}, ${tm3[1].toFixed(2)}</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
 
-            popupHtml += `<div class="pop-section"><div class="pop-header-title"><span>${layerTitle}</span></div><div class="pop-info-box"><div class="pop-swatch" style="background:${color}"></div><div class="pop-details"><span class="pop-obj-name">${mainInfo}</span>${props.KECAMATAN ? `<span class="pop-sub">Kec. ${props.KECAMATAN}</span>` : ''}</div></div></div>`;
+        if (features.length > 0) {
+            features.forEach(f => {
+                const props = f.properties;
+                const lid = f.layer.id;
+                let layerTitle = "Informasi", color = "gray", mainInfo = props.NAMOBJ || "Tidak Ada Data";
 
-            if(lid === 'rtrw-fill') {
-                let valRaw = props.KP2B_2 ? props.KP2B_2.toString().trim() : "";
-                let teksTampilan = (valRaw === "K02A" || valRaw === "Ada") ? "Berada Pada Kawasan Pertanian Pangan Berkelanjutan" : "Tidak Berada Pada Kawasan Pertanian Pangan Berkelanjutan";
-                popupHtml += `<div class="pop-section"><div class="pop-header-title"><span>INFORMASI KP2B</span></div><div class="pop-info-box"><div class="pop-details"><span class="pop-obj-name">${teksTampilan}</span></div></div></div>`;
-            }
-        });
+                // LOGIKA TIAP LAYER
+                if(lid === 'znt-fill') {
+                    layerTitle = "Zona Nilai Tanah (ZNT) 2025";
+                    const v = props.MEAN;
+                    
+                    // Menentukan Label dan Warna berdasarkan nilai MEAN
+                    if (v <= 100000) { 
+                        mainInfo = "< Rp. 100.000"; 
+                        color = 'rgba(56,168,80,1.0)'; 
+                    } else if (v <= 200000) { 
+                        mainInfo = "Rp. 100.001 - Rp. 200.000"; 
+                        color = 'rgba(102,191,80,1.0)'; 
+                    } else if (v <= 400000) { 
+                        mainInfo = "Rp. 200.001 - Rp. 400.000"; 
+                        color = 'rgba(155,217,80,1.0)'; 
+                    } else if (v <= 800000) { 
+                        mainInfo = "Rp. 400.001 - Rp. 800.000"; 
+                        color = 'rgba(222,242,80,1.0)'; 
+                    } else if (v <= 1000000) { 
+                        mainInfo = "Rp. 800.001 - Rp. 1.000.000"; 
+                        color = 'rgba(225,221,80,1.0)'; 
+                    } else if (v <= 2000000) { 
+                        mainInfo = "Rp. 1.000.001 - Rp. 2.000.000"; 
+                        color = 'rgba(255,145,80,1.0)'; 
+                    } else if (v <= 4000000) { 
+                        mainInfo = "Rp. 2.000.001 - Rp. 4.000.000"; 
+                        color = 'rgba(255,72,80,1.0)'; 
+                    } else { 
+                        mainInfo = "> Rp. 4.000.000"; 
+                        color = 'rgba(255,0,80,1.0)'; 
+                    }
+                }
+                else if(lid === 'lbs-fill') { layerTitle = "Informasi Lahan Baku Sawah"; color = lbsFillColor; mainInfo = "Berada Pada Lahan Baku Sawah"; }
+                else if(lid === 'lsd-fill') { layerTitle = "Informasi Lahan Sawah Dilindungi"; color = 'rgba(255, 85, 0, 1.0)'; mainInfo = props.LSD ? "Berada Pada Lahan Sawah Dilindungi" : "Tidak Berada pada LSD"; } 
+                else if(lid === 'rtrw-fill') { layerTitle = "Informasi RTRW Kabupaten Tabanan"; color = rtrwSimbo[mainInfo] || '#ccc'; } 
+                else if(lid === 'rdtr-fill') { layerTitle = "Informasi RDTR Perkotaan Tabanan"; color = rdtrSimbo[mainInfo] || '#ccc'; } 
+                else if(lid === 'rdtr-selbar-fill') { layerTitle = "Informasi RDTR Kecamatan Selemadeg Barat"; color = selbarSimbo[mainInfo] || '#ccc'; }
+
+                popupHtml += `<div class="pop-section">
+                    <div class="pop-header-title"><span>${layerTitle}</span></div>
+                    <div class="pop-info-box">
+                        <div class="pop-swatch" style="background:${color}"></div>
+                        <div class="pop-details">
+                            <span class="pop-obj-name">${mainInfo}</span>
+                            ${props.KECAMATAN ? `<span class="pop-sub">Kec. ${props.KECAMATAN}</span>` : ''}
+                        </div>
+                    </div>
+                </div>`;
+
+                if(lid === 'rtrw-fill') {
+                    let valRaw = props.KP2B_2 ? props.KP2B_2.toString().trim() : "";
+                    let teksTampilan = (valRaw === "K02A" || valRaw === "Ada") ? "Berada Pada Kawasan Pertanian Pangan Berkelanjutan" : "Tidak Berada Pada Kawasan Pertanian Pangan Berkelanjutan";
+                    popupHtml += `<div class="pop-section"><div class="pop-header-title"><span>INFORMASI KP2B</span></div><div class="pop-info-box"><div class="pop-details"><span class="pop-obj-name">${teksTampilan}</span></div></div></div>`;
+                }
+            });
+        } else {
+            popupHtml += `<div class="pop-section" style="padding:10px; text-align:center; color:gray; font-style:italic; font-size:11px;">Klik area poligon untuk melihat data tata ruang.</div>`;
+        }
+
         popupHtml += `</div>`;
-        new maplibregl.Popup({ offset: [0, -10] }).setLngLat(lngLat).setHTML(popupHtml).addTo(map);
+        new maplibregl.Popup({ offset: [0, -10], maxWidth: '300px' }).setLngLat(lngLat).setHTML(popupHtml).addTo(map);
     }
 
-    // --- FUNGSI SEARCH & AUTOSUGGESTION ---
+    // --- SEARCH & SUGGESTION ---
     searchInput.addEventListener('input', function() {
         const val = this.value;
         if (searchMode !== 'address' || val.length < 3) { suggestBox.style.display = 'none'; return; }
-        
-        // Menggunakan Photon API (Lebih cepat untuk auto-suggest)
-        fetch(`https://photon.komoot.io/api/?q=${val}&lat=-8.45&lon=115.12&limit=5`)
+        fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(val)}&bbox=114.4,-8.8,115.5,-8.1&limit=5`)
             .then(r => r.json()).then(data => {
                 suggestBox.innerHTML = '';
                 if(data.features && data.features.length > 0) {
@@ -266,10 +403,10 @@
                         const [lon, lat] = f.geometry.coordinates;
                         const div = document.createElement('div');
                         div.className = 'suggest-item';
-                        div.innerHTML = `<span class="main-name">${item.name || ''}</span><span class="sub-name">${item.city || ''}, ${item.state || ''}</span>`;
+                        div.innerHTML = `<span class="main-name">${item.name || ''}</span><span class="sub-name" style="display:block; font-size:0.8em; color:gray;">${item.city || item.district || ''}</span>`;
                         div.onclick = () => {
                             searchInput.value = item.name || '';
-                            suggestBox.style.display = 'none';
+                            suggestBox.style.display = 'none'; 
                             gotoLocation(lon, lat);
                         };
                         suggestBox.appendChild(div);
@@ -281,116 +418,69 @@
     function handleSearch() {
         const val = searchInput.value;
         if (!val) return;
+        suggestBox.style.display = 'none';
 
         if (searchMode === 'address') {
-    // URL Photon lebih ringkas dan cepat
-    // Kita batasi (bbox) di sekitar koordinat Bali: 114.4,-8.8 ke 115.5,-8.1
-    const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(val)}&bbox=114.4,-8.8,115.5,-8.1&limit=5`;
-
-    fetch(photonUrl)
-        .then(r => r.json())
-        .then(d => {
-            if (d.features && d.features.length > 0) {
-                // Photon strukturnya GeoJSON: [longitude, latitude]
-                const [lon, lat] = d.features[0].geometry.coordinates;
-                gotoLocation(lon, lat);
-            } else {
-                console.log("Lokasi tidak ditemukan di Photon");
-            }
-        })
-        .catch(err => console.error("Error Photon:", err));
-        }  else {
-            // Logika Koordinat
+            fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(val)}&bbox=114.4,-8.8,115.5,-8.1&limit=1`)
+                .then(r => r.json()).then(d => {
+                    if (d.features && d.features.length > 0) {
+                        const [lon, lat] = d.features[0].geometry.coordinates;
+                        gotoLocation(lon, lat);
+                    }
+                });
+        } else {
             const parts = val.split(/[ ,]+/).map(Number);
             if (parts.length === 2) {
                 const c = document.getElementById('crs-select').value;
-                let finalLon, finalLat;
-
-                if (c === 'utm') {
-                    const conv = proj4(projUTM, 'WGS84', [parts[0], parts[1]]);
-                    finalLon = conv[0]; finalLat = conv[1];
-                } else if (c === 'tm3') {
-                    const conv = proj4(projTM3, 'WGS84', [parts[0], parts[1]]);
-                    finalLon = conv[0]; finalLat = conv[1];
-                } else {
-                    // WGS 84: Kita asumsikan input user adalah "Lat, Lon" 
-                    // Tapi MapLibre butuh Lon, Lat. Jadi kita balik.
-                    if (parts[0] < 0) { // Jika angka pertama negatif, itu pasti Latitude (Lintang)
-                        finalLat = parts[0];
-                        finalLon = parts[1];
-                    } else {
-                        finalLon = parts[0];
-                        finalLat = parts[1];
-                    }
-                }
-                gotoLocation(finalLon, finalLat);
+                let flon, flat;
+                if (c === 'utm') { [flon, flat] = proj4(projUTM, 'WGS84', [parts[0], parts[1]]); }
+                else if (c === 'tm3') { [flon, flat] = proj4(projTM3, 'WGS84', [parts[0], parts[1]]); }
+                else { if (parts[0] < 0) { flat = parts[0]; flon = parts[1]; } else { flon = parts[0]; flat = parts[1]; } }
+                gotoLocation(flon, flat);
             }
         }
     }
 
     function gotoLocation(lon, lat) {
         if (isNaN(lon) || isNaN(lat)) return;
-        
-        // Pastikan urutan [Longitude, Latitude] untuk MapLibre
-        searchMarker.setLngLat([lon, lat]).addTo(map);
-        
-        map.flyTo({
-            center: [lon, lat],
-            zoom: 17,
-            essential: true
-        });
-        
-        // Trigger popup setelah animasi terbang selesai
-        setTimeout(() => triggerPopup({ lng: lon, lat: lat }), 1000);
+        suggestBox.style.display = 'none'; 
+        map.flyTo({ center: [lon, lat], zoom: 17, essential: true });
+        map.once('moveend', () => { triggerPopup({ lng: lon, lat: lat }); });
     }
+
     function setSearchMode(m) { 
         searchMode = m; 
         document.getElementById('mode-addr').className = m === 'address' ? 'mode-pill active' : 'mode-pill';
         document.getElementById('mode-coord').className = m === 'coordinate' ? 'mode-pill active' : 'mode-pill';
-        
-        // Panggil fungsi update placeholder
         updatePlaceholder();
-        
         suggestBox.style.display = 'none';
-        searchInput.value = ''; // Opsional: bersihkan input biar nggak campur aduk
+        searchInput.value = '';
     }
 
     function updateCoordLabels() { 
         const c = document.getElementById('crs-select').value; 
         document.getElementById('lbl-x').innerText = c === 'wgs' ? "Bujur (Lon)" : "Timur (X)"; 
         document.getElementById('lbl-y').innerText = c === 'wgs' ? "Lintang (Lat)" : "Utara (Y)"; 
-        
-        // Update placeholder kalau sedang di mode koordinat
-        if (searchMode === 'coordinate') {
-            updatePlaceholder();
-        }
+        if (searchMode === 'coordinate') updatePlaceholder();
     }
 
     function updatePlaceholder() {
         const c = document.getElementById('crs-select').value;
-        if (searchMode === 'address') {
-            searchInput.placeholder = "Cari alamat atau tempat di Tabanan...";
-        } else {
-            if (c === 'wgs') {
-                // Memberitahu client formatnya bebas (Lat, Lon) atau (Lon, Lat)
-                searchInput.placeholder = "Contoh: -8.45, 115.12 atau 115.12, -8.45";
-            } else if (c === 'utm') {
-                searchInput.placeholder = "Format UTM: X, Y (Contoh: 301234, 9062345)";
-            } else if (c === 'tm3') {
-                searchInput.placeholder = "Format TM-3: X, Y (Contoh: 204500, 1465000)";
-            }
+        if (searchMode === 'address') { searchInput.placeholder = "Cari alamat atau tempat..."; }
+        else {
+            if (c === 'wgs') searchInput.placeholder = "Contoh: -8.45, 115.12";
+            else if (c === 'utm') searchInput.placeholder = "UTM: X, Y (301234, 9062345)";
+            else if (c === 'tm3') searchInput.placeholder = "TM-3: X, Y (204500, 1465000)";
         }
     }
 
-    // Klik manual di peta
-    map.on('click', (e) => triggerPopup(e.lngLat));
+    map.on('click', (e) => { triggerPopup(e.lngLat); });
 
-    // UI & Tooling
     function updateOpacity(lyr, val) { const opacity = parseFloat(val) / 100; if (map.getLayer(lyr)) map.setPaintProperty(lyr, 'fill-opacity', opacity); }
     function toggleLyrVis(e, lyr, ico) { e.stopPropagation(); const v = map.getLayoutProperty(lyr, 'visibility') !== 'none'; map.setLayoutProperty(lyr, 'visibility', v ? 'none' : 'visible'); document.getElementById(ico).classList.toggle('off', v); }
     function toggleDropdown(id) { document.getElementById(id).classList.toggle('active'); }
     function toggleLegendPanel() { document.getElementById('side-legend').classList.toggle('active'); }
-    function renderLgd(id, sim) { const c = document.getElementById(id); Object.entries(sim).forEach(([n, col]) => { c.innerHTML += `<div class="legend-item"><div class="legend-color" style="background:${col}"></div><span>${n}</span></div>`; }); }
+    function renderLgd(id, sim) { const c = document.getElementById(id); if(!c) return; Object.entries(sim).forEach(([n, col]) => { c.innerHTML += `<div class="legend-item"><div class="legend-color" style="background:${col}"></div><span>${n}</span></div>`; }); }
     function changeBasemap(t) { map.setLayoutProperty('osm-layer', 'visibility', t==='osm'?'visible':'none'); map.setLayoutProperty('esri-layer', 'visibility', t==='esri'?'visible':'none'); document.getElementById('btn-osm').className = t==='osm'?'bm-item active':'bm-item'; document.getElementById('btn-esri').className = t==='esri'?'bm-item active':'bm-item'; }
 
     map.on('mousemove', (e) => {
@@ -401,16 +491,25 @@
         if (c === 'tm3') [x, y] = proj4('WGS84', projTM3, [lng, lat]);
         document.getElementById('val-x').innerText = x.toFixed(3);
         document.getElementById('val-y').innerText = y.toFixed(3);
-        
-        // Ganti kursor jika di atas layer
-        const layers = ['lsd-fill', 'lbs-fill', 'rdtr-fill', 'rdtr-selbar-fill', 'rtrw-fill'];
-        const features = map.queryRenderedFeatures(e.point, { layers: layers.filter(l => map.getLayer(l)) });
+        const activeLayers = ['znt-fill', 'lsd-fill', 'lbs-fill', 'rdtr-fill', 'rdtr-selbar-fill', 'rtrw-fill'];
+        const features = map.queryRenderedFeatures(e.point, { layers: activeLayers.filter(l => map.getLayer(l)) });
         map.getCanvas().style.cursor = features.length ? 'pointer' : '';
     });
+
+    // --- TUTUP POPUP DENGAN TOMBOL ESCAPE ---
+    document.addEventListener('keydown', (e) => {
+        if (e.key === "Escape") {
+            const popups = document.getElementsByClassName('maplibregl-popup');
+            if (popups.length > 0) {
+                for (let i = 0; i < popups.length; i++) {
+                    popups[i].remove();
+                }
+                suggestBox.style.display = 'none';
+            }
+        }
+    });
     
-    // Klik di luar search untuk tutup suggest
     document.addEventListener('click', (e) => { if (!e.target.closest('.search-wrapper')) suggestBox.style.display = 'none'; });
 </script>
 </body>
 </html>
-
