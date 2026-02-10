@@ -64,7 +64,7 @@
         .bm-label { position: absolute; bottom: 0; width: 100%; background: rgba(0,31,63,0.8); color: white; font-size: 7px; text-align: center; padding: 3px 0; font-weight: bold; }
 
         /* POPUP STYLE */
-        .maplibregl-popup-content { padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.2); border: none; max-width: 280px !important; }
+        .maplibregl-popup-content { padding: 10px; border-radius: 12px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.2); border: none; max-width: 280px !important; }
         .pop-container { max-height: 350px; overflow-y: auto; background: #fff; }
         .pop-section { border-bottom: 1px solid #eee; }
         .pop-header-title { background: #f4f7f9; color: var(--navy); padding: 8px 12px; font-size: 11px; font-weight: 800; text-transform: uppercase; border-bottom: 1px solid #eee; }
@@ -73,6 +73,39 @@
         .pop-details { display: flex; flex-direction: column; flex-grow: 1; }
         .pop-obj-name { font-size: 13px; font-weight: 700; color: #222; line-height: 1.3; }
         .pop-sub { font-size: 10px; color: #666; margin-top: 2px; font-weight: 500; }
+
+        /* POPUP LOADING SPINNER */
+        .popup-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            min-width: 180px;
+            background: white;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--navy); /* Mengikuti warna navy kamu */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 12px;
+        }
+
+        .loading-text {
+            font-size: 11px;
+            font-weight: 600;
+            color: #555;
+            text-align: center;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -279,9 +312,22 @@
         renderLgd('selbar-legend-list', selbarSimbo);
     });
 
-    // --- LOGIC SUPER POPUP ---
+    // --- LOGIC SUPER POPUP DENGAN LOADING ---
     async function triggerPopup(lngLat) {
         const { lng, lat } = lngLat;
+
+        // 1. Tampilkan Popup Loading Sementara
+        const loadingPop = new maplibregl.Popup({ offset: [0, -10], closeButton: false })
+            .setLngLat(lngLat)
+            .setHTML(`
+                <div class="popup-loading">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Sedang memproses data...</div>
+                </div>
+            `)
+            .addTo(map);
+
+        // 2. Proses Ambil Koordinat & Alamat (Data diproses di belakang layar)
         const utm = proj4('WGS84', projUTM, [lng, lat]);
         const tm3 = proj4('WGS84', projTM3, [lng, lat]);
 
@@ -296,13 +342,13 @@
         } catch (err) { alamat = "Gagal memuat alamat"; }
 
         const point = map.project(lngLat);
-        // Tambahkan znt-fill ke array layers
         const layers = ['lsd-fill', 'lbs-fill', 'rdtr-fill', 'rdtr-selbar-fill', 'rtrw-fill', 'znt-fill'];
         const features = map.queryRenderedFeatures(point, { layers: layers.filter(l => map.getLayer(l)) });
 
+        // 3. Bangun Isi Popup Asli
         let popupHtml = `<div class="pop-container">`;
-
-        // SEKSI INFO LOKASI (Koordinat)
+        
+        // SEKSI INFO LOKASI
         popupHtml += `
             <div class="pop-section">
                 <div class="pop-header-title"><span>📍 INFORMASI LOKASI</span></div>
@@ -326,37 +372,18 @@
                 const lid = f.layer.id;
                 let layerTitle = "Informasi", color = "gray", mainInfo = props.NAMOBJ || "Tidak Ada Data";
 
-                // LOGIKA TIAP LAYER
                 if(lid === 'znt-fill') {
                     layerTitle = "Zona Nilai Tanah (ZNT) 2025";
                     const v = props.MEAN;
-                    
-                    // Menentukan Label dan Warna berdasarkan nilai MEAN
-                    if (v <= 100000) { 
-                        mainInfo = "< Rp. 100.000"; 
-                        color = 'rgba(56,168,80,1.0)'; 
-                    } else if (v <= 200000) { 
-                        mainInfo = "Rp. 100.001 - Rp. 200.000"; 
-                        color = 'rgba(102,191,80,1.0)'; 
-                    } else if (v <= 400000) { 
-                        mainInfo = "Rp. 200.001 - Rp. 400.000"; 
-                        color = 'rgba(155,217,80,1.0)'; 
-                    } else if (v <= 800000) { 
-                        mainInfo = "Rp. 400.001 - Rp. 800.000"; 
-                        color = 'rgba(222,242,80,1.0)'; 
-                    } else if (v <= 1000000) { 
-                        mainInfo = "Rp. 800.001 - Rp. 1.000.000"; 
-                        color = 'rgba(225,221,80,1.0)'; 
-                    } else if (v <= 2000000) { 
-                        mainInfo = "Rp. 1.000.001 - Rp. 2.000.000"; 
-                        color = 'rgba(255,145,80,1.0)'; 
-                    } else if (v <= 4000000) { 
-                        mainInfo = "Rp. 2.000.001 - Rp. 4.000.000"; 
-                        color = 'rgba(255,72,80,1.0)'; 
-                    } else { 
-                        mainInfo = "> Rp. 4.000.000"; 
-                        color = 'rgba(255,0,80,1.0)'; 
-                    }
+                    if (v <= 100000) { mainInfo = "< Rp. 100.000"; color = 'rgba(56,168,80,1.0)'; }
+                    else if (v <= 200000) { mainInfo = "Rp. 100.001 - Rp. 200.000"; color = 'rgba(102,191,80,1.0)'; }
+                    else if (v <= 400000) { mainInfo = "Rp. 200.001 - Rp. 400.000"; color = 'rgba(155,217,80,1.0)'; }
+                    else if (v <= 800000) { mainInfo = "Rp. 400.001 - Rp. 800.000"; color = 'rgba(222,242,80,1.0)'; }
+                    else if (v <= 1000000) { mainInfo = "Rp. 800.001 - Rp. 1.000.000"; color = 'rgba(225,221,80,1.0)'; }
+                    else if (v <= 2000000) { mainInfo = "Rp. 1.000.001 - Rp. 2.000.000"; color = 'rgba(255,145,80,1.0)'; }
+                    else if (v <= 4000000) { mainInfo = "Rp. 2.000.001 - Rp. 4.000.000"; color = 'rgba(255,72,80,1.0)'; }
+                    else { mainInfo = "> Rp. 4.000.000"; color = 'rgba(255,0,80,1.0)'; }
+                    mainInfo += `<br><span style="font-size:0.85em; font-weight:normal; color:#666;">Nilai Rata-rata: Rp. ${Number(v).toLocaleString('id-ID')}</span>`;
                 }
                 else if(lid === 'lbs-fill') { layerTitle = "Informasi Lahan Baku Sawah"; color = lbsFillColor; mainInfo = "Berada Pada Lahan Baku Sawah"; }
                 else if(lid === 'lsd-fill') { layerTitle = "Informasi Lahan Sawah Dilindungi"; color = 'rgba(255, 85, 0, 1.0)'; mainInfo = props.LSD ? "Berada Pada Lahan Sawah Dilindungi" : "Tidak Berada pada LSD"; } 
@@ -381,12 +408,19 @@
                     popupHtml += `<div class="pop-section"><div class="pop-header-title"><span>INFORMASI KP2B</span></div><div class="pop-info-box"><div class="pop-details"><span class="pop-obj-name">${teksTampilan}</span></div></div></div>`;
                 }
             });
+                
+        
         } else {
             popupHtml += `<div class="pop-section" style="padding:10px; text-align:center; color:gray; font-style:italic; font-size:11px;">Klik area poligon untuk melihat data tata ruang.</div>`;
         }
-
         popupHtml += `</div>`;
-        new maplibregl.Popup({ offset: [0, -10], maxWidth: '300px' }).setLngLat(lngLat).setHTML(popupHtml).addTo(map);
+
+        // 4. Hapus Popup Loading, Ganti dengan Popup Hasil
+        loadingPop.remove();
+        new maplibregl.Popup({ offset: [0, -10], maxWidth: '300px' })
+            .setLngLat(lngLat)
+            .setHTML(popupHtml)
+            .addTo(map);
     }
 
     // --- SEARCH & SUGGESTION ---
