@@ -383,7 +383,6 @@
                     else if (v <= 2000000) { mainInfo = "Rp. 1.000.001 - Rp. 2.000.000"; color = 'rgba(255,145,80,1.0)'; }
                     else if (v <= 4000000) { mainInfo = "Rp. 2.000.001 - Rp. 4.000.000"; color = 'rgba(255,72,80,1.0)'; }
                     else { mainInfo = "> Rp. 4.000.000"; color = 'rgba(255,0,80,1.0)'; }
-                    mainInfo += `<br><span style="font-size:0.85em; font-weight:normal; color:#666;">Nilai Rata-rata: Rp. ${Number(v).toLocaleString('id-ID')}</span>`;
                 }
                 else if(lid === 'lbs-fill') { layerTitle = "Informasi Lahan Baku Sawah"; color = lbsFillColor; mainInfo = "Berada Pada Lahan Baku Sawah"; }
                 else if(lid === 'lsd-fill') { layerTitle = "Informasi Lahan Sawah Dilindungi"; color = 'rgba(255, 85, 0, 1.0)'; mainInfo = props.LSD ? "Berada Pada Lahan Sawah Dilindungi" : "Tidak Berada pada LSD"; } 
@@ -547,3 +546,4 @@
 </script>
 </body>
 </html>
+
